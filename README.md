@@ -33,12 +33,21 @@ Both health stores de-duplicate overlapping data (e.g. phone + watch), so steps 
 
 ### 1. Supabase
 
-1. Create a project at supabase.com (free tier is fine).
-2. SQL Editor → paste and run `supabase/migrations/0001_init.sql`.
-3. Authentication → Providers → Email: enabled. For quick testing you can turn off "Confirm email".
-4. Copy `.env.example` to `.env` and fill in the project URL and anon key (Project Settings → API).
+The Supabase project **MoveMates** (`mtrrrpglftohksaphujw`, us-east-2) is already set up with `supabase/migrations/0001_init.sql`. The app's public keys are in `eas.json` and `.env.example`.
 
-### 2. Run it
+To start fresh on a new project instead: run the migration in the SQL Editor, then put that project's URL and publishable key in `.env` and `eas.json`.
+
+### 2. Android test build (no Android Studio needed)
+
+```bash
+npm install
+npx eas-cli@latest login                     # free Expo account
+npx eas-cli@latest build --profile preview --platform android
+```
+
+When the cloud build finishes (about 10–20 minutes), open the link it prints on your Android phone, download the APK and install it (allow "install unknown apps" if asked). Then open MoveMates, create an account, and tap **Connect** to allow Health Connect.
+
+### 3. Run it locally
 
 ```bash
 npm install
@@ -55,7 +64,7 @@ npx expo run:android            # or: npx eas-cli@latest build --profile develop
 npx expo run:ios --device       # or: npx eas-cli@latest build --profile development --platform ios
 ```
 
-### 3. Connect wearables
+### 4. Connect wearables
 
 Each person turns on syncing in their wearable's own app:
 
