@@ -58,7 +58,8 @@
           }
         }
       ],
-      "expo-background-task"
+      "expo-background-task",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": false
