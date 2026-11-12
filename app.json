@@ -12,7 +12,10 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.movemates.app",
       "infoPlist": {
-        "UIBackgroundModes": ["fetch", "processing"]
+        "UIBackgroundModes": [
+          "fetch",
+          "processing"
+        ]
       }
     },
     "android": {
@@ -49,16 +52,23 @@
         "expo-build-properties",
         {
           "android": {
-            "compileSdkVersion": 36,
+            "compileSdkVersion": 37,
             "targetSdkVersion": 36,
             "minSdkVersion": 26
           }
         }
       ],
-      "expo-background-task"
+      "expo-background-task",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": false
+    },
+    "owner": "vikramtumukunta",
+    "extra": {
+      "eas": {
+        "projectId": "93abfcc5-370d-4671-9b4c-613503f8e1a2"
+      }
     }
   }
 }

@@ -1,7 +1,7 @@
 -- MoveMates MVP schema: profiles, friends, daily stats, challenges.
 -- Run this in the Supabase SQL editor (or with `supabase db push`).
 
-create extension if not exists citext;
+create extension if not exists citext with schema extensions;
 
 -- ---------------------------------------------------------------------------
 -- Tables
@@ -63,10 +63,14 @@ create table public.challenge_members (
 create index challenge_members_user_idx on public.challenge_members (user_id);
 
 -- ---------------------------------------------------------------------------
--- Helper functions (security definer so policies don't recurse)
+-- Helper functions (security definer so policies don't recurse).
+-- They live in a private schema so they are not callable through the API.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.are_friends(a uuid, b uuid)
+create schema if not exists private;
+grant usage on schema private to authenticated;
+
+create or replace function private.are_friends(a uuid, b uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from friendships
@@ -75,17 +79,17 @@ returns boolean language sql stable security definer set search_path = public as
   );
 $$;
 
-create or replace function public.is_challenge_member(c uuid, u uuid)
+create or replace function private.is_challenge_member(c uuid, u uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from challenge_members where challenge_id = c and user_id = u);
 $$;
 
-create or replace function public.challenge_creator(c uuid)
+create or replace function private.challenge_creator(c uuid)
 returns uuid language sql stable security definer set search_path = public as $$
   select created_by from challenges where id = c;
 $$;
 
-create or replace function public.shares_challenge(a uuid, b uuid)
+create or replace function private.shares_challenge(a uuid, b uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from challenge_members m1
@@ -93,6 +97,9 @@ returns boolean language sql stable security definer set search_path = public as
     where m1.user_id = a and m2.user_id = b
   );
 $$;
+
+revoke execute on all functions in schema private from public, anon;
+grant execute on all functions in schema private to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Row level security
@@ -125,8 +132,8 @@ create policy "remove friendship" on public.friendships
 create policy "read stats" on public.daily_stats
   for select to authenticated using (
     user_id = auth.uid()
-    or public.are_friends(auth.uid(), user_id)
-    or public.shares_challenge(auth.uid(), user_id)
+    or private.are_friends(auth.uid(), user_id)
+    or private.shares_challenge(auth.uid(), user_id)
   );
 create policy "write own stats" on public.daily_stats
   for insert to authenticated with check (user_id = auth.uid());
@@ -135,7 +142,7 @@ create policy "update own stats" on public.daily_stats
 
 create policy "read my challenges" on public.challenges
   for select to authenticated using (
-    created_by = auth.uid() or public.is_challenge_member(id, auth.uid())
+    created_by = auth.uid() or private.is_challenge_member(id, auth.uid())
   );
 create policy "create challenge" on public.challenges
   for insert to authenticated with check (created_by = auth.uid());
@@ -143,16 +150,16 @@ create policy "delete own challenge" on public.challenges
   for delete to authenticated using (created_by = auth.uid());
 
 create policy "read members" on public.challenge_members
-  for select to authenticated using (public.is_challenge_member(challenge_id, auth.uid()));
+  for select to authenticated using (private.is_challenge_member(challenge_id, auth.uid()));
 -- The creator adds themselves and any of their friends.
 create policy "creator adds members" on public.challenge_members
   for insert to authenticated with check (
-    public.challenge_creator(challenge_id) = auth.uid()
-    and (user_id = auth.uid() or public.are_friends(auth.uid(), user_id))
+    private.challenge_creator(challenge_id) = auth.uid()
+    and (user_id = auth.uid() or private.are_friends(auth.uid(), user_id))
   );
 create policy "leave or remove" on public.challenge_members
   for delete to authenticated using (
-    user_id = auth.uid() or public.challenge_creator(challenge_id) = auth.uid()
+    user_id = auth.uid() or private.challenge_creator(challenge_id) = auth.uid()
   );
 
 -- ---------------------------------------------------------------------------
